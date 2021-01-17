@@ -11,9 +11,10 @@ public class Tokenizer {
         this.it = it;
     }
 
+    // 这里本来是想实现 Iterator<Token> 的，但是 Iterator 不允许抛异常，于是就这样了
     /**
      * 获取下一个 Token
-     *
+     * 
      * @return
      * @throws TokenizeError 如果解析有异常则抛出
      */
