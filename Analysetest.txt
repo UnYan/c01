@@ -1,29 +1,46 @@
-fn calcPi() -> double {
-    let i: int = 1;
-    let rtv: double = 0.0;
-    let flag: int = -1;
-    while ((1.0 / i as double) > 1.0E-6) {
-        rtv = rtv + flag as double / i as double;
-        i = i + 2;
-        flag = -flag;
-    }
-    return rtv * 4.0;
+fn is_odd(x: int) -> int {
+    return (x / 2 * 2) - x;
 }
 
-fn calcE() -> double {
-    let rtv: double = 1.0;
-    let i: int = 1;
-    let j: double = 1.0;
-    while (i < 1000) {
-        j = j * i as double;
-        rtv = rtv + 1.0 / j;
-        i = i + 1;
+fn fastpow(base: int, exp: int) -> int {
+    let res: int = 1;
+    if exp < 0 {
+        return 0;
     }
-    return rtv;
+    while 1 {
+        if is_odd(exp) {
+            res = res * base;
+        }
+        base = base * base;
+        exp = exp / 2;
+        if exp == 0 {
+            break;
+        }
+    }
+
+    return res;
 }
 
 fn main() -> void {
-    putdouble(calcPi());
-    putln();
-    putdouble(calcE());
+    let base: int;
+    let exp: int;
+    let count: int;
+    count = getint();
+    count = count * 4 + 1;
+    while 1{
+        if is_odd(count){
+            count = count - 3;
+            continue;
+            return ;
+        } else if count < 0 {
+            break;
+            return ;
+        }
+        }
+        base = getint();
+        exp = getint();
+        putint(fastpow(base,exp));
+        putln();
+        count = count - 1;
+
 }
