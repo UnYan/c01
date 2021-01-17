@@ -13,11 +13,10 @@ public class SymbolEntry implements Comparable<SymbolEntry>{
     boolean isInitialized;
     int stackOffset;
     Type type;
-    boolean isStr=false;//表示是否为字符串
-    String string;//上个变量为true时存字符串内容
+    boolean isStr = false;//表示是否为字符串
+    String string;        //上个变量为true时存字符串内容
 
-
-    boolean isFunction=false;
+    boolean isFunction = false;
     boolean isGlobal;
 
     TokenType tokenType;
@@ -28,11 +27,11 @@ public class SymbolEntry implements Comparable<SymbolEntry>{
     double doubleValue;
     long  uintValue;
     String stringValue;
-    int number;//对于函数需要知道它在全局变量中的位置
+    int number;
     int localParameterNum;
     int instructionNum;
     int length;
-    List<Instruction> instructionList=new ArrayList<>();
+    List<Instruction> instructionList = new ArrayList<>();
 
     /**
      * @param isConstant
@@ -45,10 +44,10 @@ public class SymbolEntry implements Comparable<SymbolEntry>{
         this.isInitialized = isDeclared;
         this.stackOffset = stackOffset;
     }
-@Override
-public int compareTo(SymbolEntry o){
+    @Override
+    public int compareTo(SymbolEntry o){
         return this.stackOffset-o.stackOffset;
-}
+    }
     /**
      * @return the stackOffset
      */

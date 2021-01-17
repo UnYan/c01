@@ -3,7 +3,7 @@ package miniplc0java.analyser;
 public class FuncInfo {
     public int functionID;
     public int paraCount;
-    public int localParaCount=0;
+    public int localParaCount = 0;
     public int bodyCount;
     public Type returnType;
 

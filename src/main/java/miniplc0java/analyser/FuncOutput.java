@@ -11,5 +11,4 @@ public class FuncOutput {
         this.funcInfo = funcInfo;
         this.list = list;
     }
-
 }
