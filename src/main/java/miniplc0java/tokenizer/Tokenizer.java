@@ -5,6 +5,8 @@ import miniplc0java.error.TokenizeError;
 import miniplc0java.util.Pos;
 
 public class Tokenizer {
+    private static int identStart = 1;
+    private static int identEnd = 10;
     private StringIter it;
 
     public Tokenizer(StringIter it) {
@@ -131,25 +133,20 @@ public class Tokenizer {
 
         }}
     private Token lexIdentOrKeyword() throws TokenizeError {
-
-            Pos start = new Pos(it.currentPos().row,it.currentPos().col);
-            String s = "";
-            char c;
-            do {
-                s += it.nextChar();
-                c = it.peekChar();
-            }while (Character.isLetterOrDigit(c)||c=='_');
-            if (s.equals("fn")) return new Token(TokenType.FN_KW,s,start,it.currentPos());
-            if (s.equals("let")) return new Token(TokenType.LET_KW,s,start,it.currentPos());
-            if (s.equals("const")) return new Token(TokenType.CONST_KW,s,start,it.currentPos());
-            if (s.equals("as")) return new Token(TokenType.AS_KW,s,start,it.currentPos());
-            if (s.equals("while")) return new Token(TokenType.WHILE_KW,s,start,it.currentPos());
-            if (s.equals("if")) return new Token(TokenType.IF_KW,s,start,it.currentPos());
-            if (s.equals("else")) return new Token(TokenType.ELSE_KW,s,start,it.currentPos());
-            if (s.equals("return")) return new Token(TokenType.RETURN_KW,s,start,it.currentPos());
-            if (s.equals("break")) return new Token(TokenType.BREAK_KW,s,start,it.currentPos());
-            if (s.equals("continue")) return new Token(TokenType.CONTINUE_KW,s,start,it.currentPos());
-            return new Token(TokenType.IDENT,s,start, it.currentPos());
+        Pos start = new Pos(it.currentPos().row,it.currentPos().col);
+        StringBuilder s = new StringBuilder();
+        char c;
+        do {
+            s.append(it.nextChar());
+            c = it.peekChar();
+        }while (Character.isLetterOrDigit(c)||c=='_');
+        TokenType[] KW = TokenType.values();
+        for(int i = identStart; i <= identEnd;i++){
+            if(KW[i].toString().equalsIgnoreCase(s.toString())) {
+                return new Token(KW[i], s.toString(), start, it.currentPos());
+            }
+        }
+            return new Token(TokenType.IDENT, s.toString(),start, it.currentPos());
 
     }
     private Token lexStringLiteral() throws TokenizeError {
