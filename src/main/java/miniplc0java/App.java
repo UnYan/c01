@@ -82,6 +82,7 @@ public class App {
             try {
                 while (true) {
                     var token = tokenizer.nextToken();
+                    System.out.println(token.toString() + token.getTokenType());
                     if (token.getTokenType().equals(TokenType.EOF)) {
                         break;
                     }

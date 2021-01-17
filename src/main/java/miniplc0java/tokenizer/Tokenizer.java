@@ -232,6 +232,11 @@ public class Tokenizer {
                 return new Token(TokenType.MUL, '*', it.previousPos(), it.currentPos());
 
             case '/':
+                if (it.peekChar()=='/'){
+                    while (it.nextChar()!='\n'){
+                    }
+                    return nextToken();
+                }
                 // 填入返回语句
                 return new Token(TokenType.DIV, '/', it.previousPos(), it.currentPos());
 //                throw new Error("Not implemented");
