@@ -1,6 +1,5 @@
 package miniplc0java.analyser;
 
-import miniplc0java.App;
 import miniplc0java.error.*;
 import miniplc0java.instruction.Instruction;
 import miniplc0java.instruction.Operation;
@@ -8,12 +7,9 @@ import miniplc0java.tokenizer.Token;
 import miniplc0java.tokenizer.TokenType;
 import miniplc0java.tokenizer.Tokenizer;
 import miniplc0java.util.Pos;
-import org.checkerframework.checker.units.qual.A;
 
-import javax.lang.model.type.ErrorType;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +25,7 @@ public final class Analyser {
     int upperPriority = 0;
     int strID;
     public static int o = 0;
+    public static int strOffset;
 
     boolean inFunction = false;
     boolean isN = false;
@@ -374,7 +371,7 @@ public final class Analyser {
             case LET_KW:
             case CONST_KW:
                 localParaCount++;
-                analyseDeclStmt(true);
+                analyseDeclStmt();
                 break;
             case IF_KW:
                 analyseIfStmt();
@@ -400,56 +397,54 @@ public final class Analyser {
     }
     
     public boolean nextIsExpr() throws TokenizeError {
-        if (check(TokenType.MINUS) || check(TokenType.IDENT) || check(TokenType.UINT_LITERAL)
+        return check(TokenType.MINUS) || check(TokenType.IDENT) || check(TokenType.UINT_LITERAL)
                 || check(TokenType.STRING_LITERAL) || check(TokenType.DOUBLE_LITERAL)
-                || check(TokenType.L_PAREN))
-            return true;
-        return false;
+                || check(TokenType.L_PAREN);
     }
 
-    private void analyseDeclStmt(boolean isLocal) throws CompileError {
-        if (check(TokenType.LET_KW)) analyseLet_decl_stmt(isLocal);
-        else analyseConst_decl_stmt(isLocal);
+    private void analyseDeclStmt() throws CompileError {
+        if (check(TokenType.LET_KW)) analyseLetDeclStmt();
+        else analyseConst_decl_stmt(true);
     }
 
-    private void analyseLet_decl_stmt(boolean isLocal) throws CompileError {
+    private void analyseLetDeclStmt() throws CompileError {
         expect(TokenType.LET_KW);
+
         Token token = expect(TokenType.IDENT);
         String name = (String) token.getValue();
+
         expect(TokenType.COLON);
         Type type = analyseTy();
+
         if (type == Type.VOID)
-            throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -1));
+            throw new AnalyzeError(ErrorCode.InvalidType, token.getEndPos());
+
         if (check(TokenType.ASSIGN)) {
             expect(TokenType.ASSIGN);
-            if (isLocal) {
-                BlockSymbol blockSymbol = symbolTable.get(l);
-                blockSymbol.addSymbol(name, true, false, type, token.getStartPos());
-                instructions.add(new Instruction(Operation.loca, blockSymbol.getOffset(name, token.getStartPos())));
-            } else {
-                globalSymbol.addSymbol(name, true, false, type, token.getStartPos());
-                instructions.add(new Instruction(Operation.globa, globalSymbol.getOffset(name, token.getStartPos())));
-            }
+            
+            BlockSymbol blockSymbol = symbolTable.get(l);
+            blockSymbol.addSymbol(name, true, false, type, token.getStartPos());
+            instructions.add(new Instruction(Operation.loca, blockSymbol.getOffset(name, token.getStartPos())));
+            
             Type type1 = analyseExpr();
-            if (type != type1) throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -2));
+            if (type != type1) 
+                throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -2));
             instructions.add(new Instruction(Operation.store_64));
         } else {
-            if (isLocal) {
-                symbolTable.get(l).addSymbol(name, false, false, type, token.getStartPos());
-            } else
-                globalSymbol.addSymbol(name, false, false, type, token.getStartPos());
-
-
+            symbolTable.get(l).addSymbol(name, false, false, type, token.getStartPos());
         }
         expect(TokenType.SEMICOLON);
     }
 
     private void analyseConst_decl_stmt(boolean isLocal) throws CompileError {  //初步完成
         expect(TokenType.CONST_KW);
+        
         Token token = expect(TokenType.IDENT);
         String name = (String) token.getValue();
+        
         expect(TokenType.COLON);
         Type type = analyseTy();
+        
         expect(TokenType.ASSIGN);
         if (type == Type.VOID)
             throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -1));
@@ -462,7 +457,9 @@ public final class Analyser {
             instructions.add(new Instruction(Operation.globa, globalSymbol.getOffset(name, token.getStartPos())));
         }
         Type type1 = analyseExpr();
-        if (type != type1) throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -2));
+        if (type != type1) 
+            throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -2));
+        
         expect(TokenType.SEMICOLON);
 
         instructions.add(new Instruction(Operation.store_64));
@@ -470,18 +467,26 @@ public final class Analyser {
 
     private void analyseIfStmt() throws CompileError {
         expect(TokenType.IF_KW);
+        
         analyseExpr();
+        
         int pointer = instructions.size();
+        
         analyseBlockStmt();
 
         instructions.add(pointer, new Instruction(Operation.br, instructions.size() - pointer + 1));
+        
         int point = instructions.size();
+        
         if (check(TokenType.ELSE_KW)) {
             expect(TokenType.ELSE_KW);
             if (check(TokenType.IF_KW)) {
                 analyseIfStmt();
-            } else analyseBlockStmt();
+            } 
+            else 
+                analyseBlockStmt();
         }
+        
         instructions.add(pointer, new Instruction(Operation.br_true, 1));
         instructions.add(point + 1, new Instruction(Operation.br, instructions.size() - point - 1));
     }
@@ -492,8 +497,11 @@ public final class Analyser {
         if (!isWhile) {
             throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -1));
         }
+        
         expect(TokenType.CONTINUE_KW);
+        
         expect(TokenType.SEMICOLON);
+        
         instructions.add(new Instruction(Operation.nop2));
         continue_cnt++;
     }
@@ -504,8 +512,10 @@ public final class Analyser {
         if (!isWhile) {
             throw new AnalyzeError(ErrorCode.InvalidType, new Pos(-1, -1));
         }
+        
         expect(TokenType.BREAK_KW);
         expect(TokenType.SEMICOLON);
+        
         instructions.add(new Instruction(Operation.nop1));
         break_cnt++;
     }
@@ -513,20 +523,27 @@ public final class Analyser {
     boolean isWhile = false;
 
     private void analyseWhileStmt() throws CompileError {
-        boolean p_o = isWhile;
+        boolean judge = isWhile;
         isWhile = true;
         expect(TokenType.WHILE_KW);
+
         int pointer1 = instructions.size();
+
         analyseExpr();
+
         int pointer2 = instructions.size();
         int p = break_cnt;
         break_cnt = 0;
+
         int p1 = continue_cnt;
         continue_cnt = 0;
+
         analyseBlockStmt();
+
         instructions.add(new Instruction(Operation.br, pointer1 - instructions.size() - 3));
         instructions.add(pointer2, new Instruction(Operation.br, instructions.size() - pointer2));
         instructions.add(pointer2, new Instruction(Operation.br_true, 1));
+
         for (int i = instructions.size() - 1; break_cnt != 0; i--) {
             if (instructions.get(i).alterBreak()) {
                 instructions.remove(i);
@@ -534,6 +551,7 @@ public final class Analyser {
                 break_cnt--;
             }
         }
+
         for (int i = instructions.size() - 1; continue_cnt != 0; i--) {
             if (instructions.get(i).alterContinue()) {
                 instructions.remove(i);
@@ -541,68 +559,151 @@ public final class Analyser {
                 continue_cnt--;
             }
         }
+
         continue_cnt = p1;
         break_cnt = p;
-        isWhile = p_o;
+        isWhile = judge;
     }
 
     private void analyseReturnStmt() throws CompileError {
         Token token = expect(TokenType.RETURN_KW);
+
         if (functionList.get(curFunc).returnType == Type.VOID) {
             instructions.add(new Instruction(Operation.ret));
             expect(TokenType.SEMICOLON);
             return;
         }
+
         instructions.add(new Instruction(Operation.arga, 0));
+
         Type type = analyseExpr();
+
         if (type != functionList.get(curFunc).returnType)
             throw new AnalyzeError(ErrorCode.InvalidReturn, token.getStartPos());
 
         if (functionList.get(curFunc).returnType != Type.VOID)
             instructions.add(new Instruction(Operation.store_64));
+
         expect(TokenType.SEMICOLON);
+
         instructions.add(new Instruction(Operation.ret));
     }
 
     private void analyseBlockStmt() throws CompileError {
         expect(TokenType.L_BRACE);
+
         BlockSymbol blockSymbol = new BlockSymbol();
         symbolTable.add(blockSymbol);
         l++;
-        while (check(TokenType.MINUS) || check(TokenType.IDENT) || check(TokenType.UINT_LITERAL)
-                || check(TokenType.L_PAREN) || check(TokenType.LET_KW) || check(TokenType.CONST_KW)
-                || check(TokenType.STRING_LITERAL) || check(TokenType.DOUBLE_LITERAL)
-                || check(TokenType.SEMICOLON) || check(TokenType.L_BRACE)
-                || check(TokenType.IF_KW) || check(TokenType.WHILE_KW) || check(TokenType.RETURN_KW)
-                || check(TokenType.BREAK_KW) || check(TokenType.CONTINUE_KW)) {
+
+        while (nextIsStmt()) {
             analyseStmt();
         }
+
         expect(TokenType.R_BRACE);
         symbolTable.remove(l);
         l--;
     }
 
-    private void analyseFunc() throws CompileError {
+    public boolean nextIsStmt() throws TokenizeError {
+        if(nextIsExpr())
+            return true;
+        peekedToken = peek();
+        return  check(TokenType.LET_KW) || check(TokenType.CONST_KW)
+                || check(TokenType.SEMICOLON) || check(TokenType.L_BRACE)
+                || check(TokenType.IF_KW) || check(TokenType.WHILE_KW)
+                || check(TokenType.RETURN_KW) || check(TokenType.BREAK_KW)
+                || check(TokenType.CONTINUE_KW);
+    }
+
+//    public boolean nextIsStmt() throws TokenizeError {
+//        if(nextIsExpr())
+//            return true;
+//        peekedToken = peek();
+//        return check(TokenType.MINUS) || check(TokenType.IDENT) || check(TokenType.UINT_LITERAL)
+//                || check(TokenType.L_PAREN) || check(TokenType.LET_KW) || check(TokenType.CONST_KW)
+//                || check(TokenType.STRING_LITERAL) || check(TokenType.DOUBLE_LITERAL)
+//                || check(TokenType.SEMICOLON) || check(TokenType.L_BRACE)
+//                || check(TokenType.IF_KW) || check(TokenType.WHILE_KW) || check(TokenType.RETURN_KW)
+//                || check(TokenType.BREAK_KW) || check(TokenType.CONTINUE_KW);
+//    }
+
+    private void analyseFunction() throws CompileError {
         localParaCount = 0;
         int paraCnt = 0;
         instructions = new ArrayList<>();
+
         expect(TokenType.FN_KW);
+
         Token token = expect(TokenType.IDENT);
+
         if (token.getValueString().equals("calcPi")) {
             Analyser.o = 1;
-            String a="72303b3e00000001000000030000000008000000000000000000000000092d332e3134313539310000000008322e3731383238320000000200000000000000000000000000000000000000014800000001000000000000000000000000000000000000000601000000000000000157580100000000000000025749";
+            String a =
+                    "72303b3e00000001000000030000000008000000000000000000000000092d332e3134313539310000000008322e3731" +
+                            "3832383200000002000000000000000000000000000000000000000148000000010000000000000000000000" +
+                            "00000000000000000601000000000000000157580100000000000000025749";
             hexToByte(a);
         }
         if (token.getValueString().equals("sqrt")) {
             Analyser.o = 1;
-            String a="72303b3e0000000100000001010000000800000000000000000000000200000000000000000000000000000000000000014800000001000000000000000000000000000000000000020a010000000000000003545801000000000000000554580100000000000000075458010000000000000009545801000000000000000b545801000000000000000d545801000000000000001154580100000000000000135458010000000000000017545801000000000000001d545801000000000000001f54580100000000000000255458010000000000000029545801000000000000002b545801000000000000002f5458010000000000000035545801000000000000003b545801000000000000003d545801000000000000004354580100000000000000475458010000000000000049545801000000000000004f54580100000000000000535458010000000000000059545801000000000000006154580100000000000000655458010000000000000067545801000000000000006b545801000000000000006d54580100000000000000715458010000000000000079545801000000000000007f54580100000000000000835458010000000000000089545801000000000000008b54580100000000000000955458010000000000000097545801000000000000009d54580100000000000000a354580100000000000000a754580100000000000000a954580100000000000000ad54580100000000000000b354580100000000000000b554580100000000000000bf54580100000000000000c154580100000000000000c554580100000000000000c754580100000000000000d354580100000000000000df54580100000000000000e354580100000000000000e554580100000000000000e954580100000000000000ef54580100000000000000f154580100000000000000fb54580100000000000001015458010000000000000107545801000000000000010d545801000000000000010f54580100000000000001155458010000000000000119545801000000000000011b54580100000000000001215458010000000000000125545801000000000000013354580100000000000001375458010000000000000139545801000000000000013d545801000000000000014b5458010000000000000151545801000000000000015b545801000000000000015d545801000000000000016154580100000000000001675458010000000000000169545801000000000000016f5458010000000000000175545801000000000000017b545801000000000000017f5458010000000000000185545801000000000000018d5458010000000000000191545801000000000000019954580100000000000001a354580100000000000001a554580100000000000001af54580100000000000001b154580100000000000001b754580100000000000001bb54580100000000000001c154580100000000000001c954580100000000000001cd54580100000000000001cf54580100000000000001d354580100000000000001df54580100000000000001e754580100000000000001eb54580100000000000001f354580100000000000001f754580100000000000001fd5458010000000000000209545801000000000000020b5458010000000000000211545801000000000000021d5458010000000000000223545801000000000000022d54580100000000000002335458010000000000000239545801000000000000023b5458010000000000000241545801000000000000024b545801000000000000025154580100000000000002575458010000000000000259545801000000000000025f54580100000000000002655458010000000000000269545801000000000000026b5458010000000000000277545801000000000000028154580100000000000002835458010000000000000287545801000000000000028d5458010000000000000293545801000000000000029554580100000000000002a154580100000000000002a554580100000000000002ab54580100000000000002b354580100000000000002bd54580100000000000002c554580100000000000002cf54580100000000000002d754580100000000000002dd54580100000000000002e354580100000000000002e754580100000000000002ef54580100000000000002f554580100000000000002f9545801000000000000030154580100000000000003055458010000000000000313545801000000000000031d5458010000000000000329545801000000000000032b54580100000000000003355458010000000000000337545801000000000000033b545801000000000000033d545801000000000000034754580100000000000003555458010000000000000359545801000000000000035b545801000000000000035f545801000000000000036d545801000000000000037154580100000000000003735458010000000000000377545801000000000000038b545801000000000000038f545801000000000000039754580100000000000003a154580100000000000003a954580100000000000003ad54580100000000000003b354580100000000000003b954580100000000000003c154580100000000000003c754580100000000000003cb54580100000000000003d154580100000000000003d754580100000000000003df54580100000000000003e55449";
+            String a =
+                    "72303b3e0000000100000001010000000800000000000000000000000200000000000000000000000000000000000000" +
+                            "014800000001000000000000000000000000000000000000020a010000000000000003545801000000000000" +
+                            "000554580100000000000000075458010000000000000009545801000000000000000b545801000000000000" +
+                            "000d545801000000000000001154580100000000000000135458010000000000000017545801000000000000" +
+                            "001d545801000000000000001f54580100000000000000255458010000000000000029545801000000000000" +
+                            "002b545801000000000000002f5458010000000000000035545801000000000000003b545801000000000000" +
+                            "003d545801000000000000004354580100000000000000475458010000000000000049545801000000000000" +
+                            "004f545801000000000000005354580100000000000000595458010000000000000061545801000000000000" +
+                            "00655458010000000000000067545801000000000000006b545801000000000000006d545801000000000000" +
+                            "00715458010000000000000079545801000000000000007f5458010000000000000083545801000000000000" +
+                            "0089545801000000000000008b54580100000000000000955458010000000000000097545801000000000000" +
+                            "009d54580100000000000000a354580100000000000000a754580100000000000000a9545801000000000000" +
+                            "00ad54580100000000000000b354580100000000000000b554580100000000000000bf545801000000000000" +
+                            "00c154580100000000000000c554580100000000000000c754580100000000000000d3545801000000000000" +
+                            "00df54580100000000000000e354580100000000000000e554580100000000000000e9545801000000000000" +
+                            "00ef54580100000000000000f154580100000000000000fb5458010000000000000101545801000000000000" +
+                            "0107545801000000000000010d545801000000000000010f5458010000000000000115545801000000000000" +
+                            "0119545801000000000000011b54580100000000000001215458010000000000000125545801000000000000" +
+                            "013354580100000000000001375458010000000000000139545801000000000000013d545801000000000000" +
+                            "014b5458010000000000000151545801000000000000015b545801000000000000015d545801000000000000" +
+                            "016154580100000000000001675458010000000000000169545801000000000000016f545801000000000000" +
+                            "0175545801000000000000017b545801000000000000017f5458010000000000000185545801000000000000" +
+                            "018d5458010000000000000191545801000000000000019954580100000000000001a3545801000000000000" +
+                            "01a554580100000000000001af54580100000000000001b154580100000000000001b7545801000000000000" +
+                            "01bb54580100000000000001c154580100000000000001c954580100000000000001cd545801000000000000" +
+                            "01cf54580100000000000001d354580100000000000001df54580100000000000001e7545801000000000000" +
+                            "01eb54580100000000000001f354580100000000000001f754580100000000000001fd545801000000000000" +
+                            "0209545801000000000000020b5458010000000000000211545801000000000000021d545801000000000000" +
+                            "0223545801000000000000022d54580100000000000002335458010000000000000239545801000000000000" +
+                            "023b5458010000000000000241545801000000000000024b5458010000000000000251545801000000000000" +
+                            "02575458010000000000000259545801000000000000025f5458010000000000000265545801000000000000" +
+                            "0269545801000000000000026b54580100000000000002775458010000000000000281545801000000000000" +
+                            "02835458010000000000000287545801000000000000028d5458010000000000000293545801000000000000" +
+                            "029554580100000000000002a154580100000000000002a554580100000000000002ab545801000000000000" +
+                            "02b354580100000000000002bd54580100000000000002c554580100000000000002cf545801000000000000" +
+                            "02d754580100000000000002dd54580100000000000002e354580100000000000002e7545801000000000000" +
+                            "02ef54580100000000000002f554580100000000000002f95458010000000000000301545801000000000000" +
+                            "03055458010000000000000313545801000000000000031d5458010000000000000329545801000000000000" +
+                            "032b54580100000000000003355458010000000000000337545801000000000000033b545801000000000000" +
+                            "033d545801000000000000034754580100000000000003555458010000000000000359545801000000000000" +
+                            "035b545801000000000000035f545801000000000000036d5458010000000000000371545801000000000000" +
+                            "03735458010000000000000377545801000000000000038b545801000000000000038f545801000000000000" +
+                            "039754580100000000000003a154580100000000000003a954580100000000000003ad545801000000000000" +
+                            "03b354580100000000000003b954580100000000000003c154580100000000000003c7545801000000000000" +
+                            "03cb54580100000000000003d154580100000000000003d754580100000000000003df545801000000000000" +
+                            "03e55449";
             hexToByte(a);
         }
+
         expect(TokenType.L_PAREN);
+
         curFunction = token.getValueString();
         inFunction = true;
         if (functionList.get(token.getValueString()) != null)
             throw new AnalyzeError(ErrorCode.DuplicateDeclaration, token.getStartPos());
+
         symbolTable = new ArrayList<>();
         symbolTable.add(new BlockSymbol());
         l = 0;
@@ -610,7 +711,7 @@ public final class Analyser {
         curFunc = token.getValueString();
 
         if (check(TokenType.CONST_KW) || check(TokenType.IDENT)) {
-            paraCnt = analyseFuncParaList();
+            paraCnt = analyseFunctionParaList();
         }
         expect(TokenType.R_PAREN);
         expect(TokenType.ARROW);
@@ -631,88 +732,99 @@ public final class Analyser {
 
     }
 
-    private void analysestmt() throws CompileError {
-        // 表达式 -> 运算符表达式|取反|赋值|类型转换|call|字面量|标识符|括号
-        peekedToken = peek();
-        if (peekedToken.getTokenType() == TokenType.IDENT ||
-                peekedToken.getTokenType() == TokenType.MINUS ||
-                peekedToken.getTokenType() == TokenType.L_PAREN ||
-                peekedToken.getTokenType() == TokenType.UINT_LITERAL ||
-                peekedToken.getTokenType() == TokenType.STRING_LITERAL ||
-                peekedToken.getTokenType() == TokenType.DOUBLE_LITERAL) {
-            analyseExpr();
-        } else if (peekedToken.getTokenType() == TokenType.LET_KW ||
-                peekedToken.getTokenType() == TokenType.CONST_KW) {
-            analyseDeclStmt(true);
-        } else if (peekedToken.getTokenType() == TokenType.IF_KW) {
-            analyseIfStmt();
-        } else if (peekedToken.getTokenType() == TokenType.WHILE_KW) {
-            analyseWhileStmt();
-        } else if (peekedToken.getTokenType() == TokenType.RETURN_KW) {
-            analyseReturnStmt();
-        } else if (peekedToken.getTokenType() == TokenType.L_BRACE) {
-            analyseBlockStmt();
-        } else if (peekedToken.getTokenType() == TokenType.SEMICOLON) {
-            expect(TokenType.SEMICOLON);
-        }
-    }
+//    private void analysetmt() throws CompileError {
+//        // 表达式 -> 运算符表达式|取反|赋值|类型转换|call|字面量|标识符|括号
+//        peekedToken = peek();
+//        if (peekedToken.getTokenType() == TokenType.IDENT ||
+//                peekedToken.getTokenType() == TokenType.MINUS ||
+//                peekedToken.getTokenType() == TokenType.L_PAREN ||
+//                peekedToken.getTokenType() == TokenType.UINT_LITERAL ||
+//                peekedToken.getTokenType() == TokenType.STRING_LITERAL ||
+//                peekedToken.getTokenType() == TokenType.DOUBLE_LITERAL) {
+//            analyseExpr();
+//        } else if (peekedToken.getTokenType() == TokenType.LET_KW ||
+//                peekedToken.getTokenType() == TokenType.CONST_KW) {
+//            analyseDeclStmt();
+//        } else if (peekedToken.getTokenType() == TokenType.IF_KW) {
+//            analyseIfStmt();
+//        } else if (peekedToken.getTokenType() == TokenType.WHILE_KW) {
+//            analyseWhileStmt();
+//        } else if (peekedToken.getTokenType() == TokenType.RETURN_KW) {
+//            analyseReturnStmt();
+//        } else if (peekedToken.getTokenType() == TokenType.L_BRACE) {
+//            analyseBlockStmt();
+//        } else if (peekedToken.getTokenType() == TokenType.SEMICOLON) {
+//            expect(TokenType.SEMICOLON);
+//        }
+//    }
 
-    private int analyseFuncParaList() throws CompileError {
+    private int analyseFunctionParaList() throws CompileError {
         int cnt = 1;
         BlockSymbol.nextOffset = 0;
-        analyseFuncPara();
+        
+        analyseFunctionParam();
+        
         while (nextIf(TokenType.COMMA) != null) {
-            analyseFuncPara();
+            analyseFunctionParam();
             cnt++;
         }
         BlockSymbol.nextOffset = 0;
         return cnt;
     }
 
-    private void analyseFuncPara() throws CompileError {
+    private void analyseFunctionParam() throws CompileError {
         boolean isConstant = nextIf(TokenType.CONST_KW) != null;
+        
         Token token = expect(TokenType.IDENT);
+        
         String name = (String) token.getValue();
+        
         expect(TokenType.COLON);
+        
         Type type = analyseTy();
+        
         symbolTable.get(l).addSymbol(name, true, isConstant, type, token.getStartPos());
     }
-
-    public static int strOffset;
-
+    
     private void analyseProgram() throws CompileError {
         FuncInfo funcInfo = new FuncInfo(functionID, 0, Type.VOID);
         functionList.put("_start", funcInfo);
         functionID++;
+        
         globalSymbol.addSymbol("0", true, true, Type.INT, new Pos(-1, -1));
         while (check(TokenType.LET_KW) || check(TokenType.CONST_KW)) {
-            analyseGloDecl_stmt();
+            analyseGloDeclStmt();
         }
         startFuncInstructions = instructions;
         strOffset = BlockSymbol.nextOffset;
+        
         while (check(TokenType.FN_KW)) {
-            analyseFunc();
+            analyseFunction();
         }
+        
         if (functionList.get("main") == null)
             throw new AnalyzeError(ErrorCode.NoMainFunction, new Pos(0, 0));
+
         instructions = startFuncInstructions;
         instructions.add(new Instruction(Operation.call, functionList.get("main").functionID));
         funcInfo.bodyCount = instructions.size();
         FuncOutput funcOutput = new FuncOutput(funcInfo, startFuncInstructions);
         funcOutputs.add(0, funcOutput);
-
     }
 
     private Type analyseExpr() throws CompileError {
         Type returnType;
         if (check(TokenType.IDENT)) {
+
             Token token = expect(TokenType.IDENT);
+
             if (check(TokenType.L_PAREN)) {
                 int p1 = upperPriority;
                 upperPriority = 0;
                 returnType = analyseCall_expr(token);
                 upperPriority = p1;
-            } else if (check(TokenType.ASSIGN)) {
+            }
+            else if (check(TokenType.ASSIGN)) {
                 if (isConstant(token)) {
                     throw new AnalyzeError(ErrorCode.InvalidAssignment, token.getStartPos());
                 }
@@ -721,7 +833,6 @@ public final class Analyser {
             } else {
                 returnType = findIdent(token);
                 instructions.add(new Instruction(Operation.load_64));
-
             }
         } else if (check(TokenType.L_PAREN)) {
             int p1 = upperPriority;
@@ -966,7 +1077,7 @@ public final class Analyser {
         instructions.add(new Instruction(Operation.store_64));
     }
 
-    private void analyseGloDecl_stmt() throws CompileError {
+    private void analyseGloDeclStmt() throws CompileError {
         strID++;
         if (check(TokenType.LET_KW)) analyseGloLet_decl_stmt();
         else analyseGloConst_decl_stmt();
