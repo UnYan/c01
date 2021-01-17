@@ -118,24 +118,6 @@ public class App {
 
                 return;
             }
-            try {
-                System.out.println("================");
-                System.out.println("72303b3e");
-                System.out.println("00000001");
-                System.out.println(String.format("%08x", Analyser.globalSymbol.getSize()));
-                System.out.println(Analyser.globalSymbol.output());
-                System.out.println(Analyser.printFuncOutputs());
-                System.out.println("====================");
-
-                output.write(hexStringToBytes("72303b3e"));
-                output.write(hexStringToBytes("00000001"));
-                output.write(hexStringToBytes(String.format("%08x", Analyser.globalSymbol.getSize())));
-                output.write(hexStringToBytes(Analyser.globalSymbol.output()));
-                output.write(hexStringToBytes(Analyser.printFuncOutputs()));
-//                System.out.println(Analyser.printFuncOutputs());
-            } catch (Exception e) {
-
-            }
         } else {
             System.err.println("Please specify either '--analyse' or '--tokenize'.");
             System.exit(3);
