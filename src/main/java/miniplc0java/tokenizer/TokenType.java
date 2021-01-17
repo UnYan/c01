@@ -42,8 +42,112 @@ public enum TokenType {
 
     COMMENT,
 
-    EOF,
+    EOF;
 
+    @Override
+    public String toString() {
+        switch (this) {
+            case nop:
+                return "NullToken";
+            case FN_KW:
+                return "fn";
+            case LET_KW:
+                return "let";
+            case CONST_KW:
+                return "const";
+            case AS_KW:
+                return "as";
+            case WHILE_KW:
+                return "while";
+            case IF_KW:
+                return "if";
+            case ELSE_KW:
+                return "else";
+            case RETURN_KW:
+                return "return";
+            case BREAK_KW:
+                return "break";
+            case CONTINUE_KW:
+                return "continue";
+            case PLUS:
+                return "+";
+            case MINUS:
+                return "-";
+            case IDENT:
+                return "ident";
+            case UINT_LITERAL:
+                return "uint_literal";
+            case STRING_LITERAL:
+                return "string_literal";
+//            case TYPE:
+//                return "type";
+            case MUL:
+                return "*";
+            case DIV:
+                return "/";
+            /** == */
+            case EQ:
+                return "==";
+            /** != */
+            case NEQ://20
+                return "!=";
+            /** < */
+            case LT:
+                return "<";
+            /** > */
+            case GT:
+                return ">";
+            /** <= */
+            case LE:
+                return "<=";
+            /** >= */
+            case GE://24
+                return ">=";
+            /** = */
+            case ASSIGN:
+                return "=";
+            /** 左括号 */
+            case L_PAREN:
+                return "(";
+            /** 右括号 */
+            case R_PAREN:
+                return ")";
+            /** 左花括号 */
+            case L_BRACE:
+                return "{";
+            /** 右花括号 */
+            case R_BRACE:
+                return "}";
+            /** -> */
+            case ARROW:
+                return "->";
+            /** , */
+            case COMMA:
+                return ",";
+            /** : */
+            case COLON:
+                return ":";
+//            /** int */
+//            case INT:
+//                return "int";
+//            /** void */
+//            case VOID:
+//                return "void";
+//            case STRING:
+//                return "string";
+//            case DOUBLE:
+//                return "double";
+            /** 分号 */
+            case SEMICOLON:
+                return ";";
+            case DOUBLE_LITERAL:
+                return "double";
+            case EOF:
+                return "EOF";
+            default:
+                return "InvalidToken";
+        }
+    }
 
 //
 //
