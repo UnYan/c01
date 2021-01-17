@@ -366,33 +366,35 @@ public final class Analyser {
             analyseExpr();
             expect(TokenType.SEMICOLON);
         }
-        peekedToken = peek();
-        switch (peekedToken.getTokenType()){
-            case LET_KW:
-            case CONST_KW:
-                localParaCount++;
-                analyseDeclStmt();
-                break;
-            case IF_KW:
-                analyseIfStmt();
-                break;
-            case WHILE_KW:
-                analyseWhileStmt();
-                break;
-            case RETURN_KW:
-                analyseReturnStmt();
-                break;
-            case L_BRACE:
-                analyseBlockStmt();
-                break;
-            case BREAK_KW:
-                analyseBreakStmt();
-                break;
-            case CONTINUE_KW:
-                analyseContinueStmt();
-                break;
-            default:
-                expect(TokenType.SEMICOLON);
+        else {
+            peekedToken = peek();
+            switch (peekedToken.getTokenType()) {
+                case LET_KW:
+                case CONST_KW:
+                    localParaCount++;
+                    analyseDeclStmt();
+                    break;
+                case IF_KW:
+                    analyseIfStmt();
+                    break;
+                case WHILE_KW:
+                    analyseWhileStmt();
+                    break;
+                case RETURN_KW:
+                    analyseReturnStmt();
+                    break;
+                case L_BRACE:
+                    analyseBlockStmt();
+                    break;
+                case BREAK_KW:
+                    analyseBreakStmt();
+                    break;
+                case CONTINUE_KW:
+                    analyseContinueStmt();
+                    break;
+                default:
+                    expect(TokenType.SEMICOLON);
+            }
         }
     }
     
